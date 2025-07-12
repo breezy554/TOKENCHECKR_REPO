@@ -8,25 +8,7 @@ export default function Home() {
   const [explanation, setExplanation] = useState('');
   const [riskScore, setRiskScore] = useState(null);
   const [flags, setFlags] = useState([]);
-
-  const getSeverity = (flag) => {
-    const critical = ['proxy', 'selfdestruct', 'mint', 'hidden owner'];
-    const warning = ['trading cooldown', 'blacklist', 'transfer limit', 'call()'];
-    const suspicious = ['pause', 'reentrancy', 'max tx'];
-
-    const text = flag.toLowerCase();
-
-    if (critical.some(f => text.includes(f))) return 'Critical';
-    if (warning.some(f => text.includes(f))) return 'Warning';
-    if (suspicious.some(f => text.includes(f))) return 'Suspicious';
-    return 'Info';
-  };
-
-  const getBadge = (score) => {
-    if (score >= 80) return { text: '🚨 HIGH RISK', color: 'bg-red-600' };
-    if (score >= 50) return { text: '⚠️ MEDIUM RISK', color: 'bg-yellow-600' };
-    return { text: '✅ LOW RISK', color: 'bg-green-600' };
-  };
+  const [eli5, setEli5] = useState(false);
 
   const handleScan = async () => {
     setStatus('');
@@ -45,7 +27,7 @@ export default function Home() {
         let result = `✅ ${data.name || 'Token'} is ${data.isVerified ? 'verified' : 'unverified'}.\nCompiler: ${data.compiler}\n\n🔎 Risk Score: ${data.score}/100`;
 
         if (data.flags.length > 0) {
-          result += `\n\n🚨 Detected Red Flags:\n` + data.flags.map(f => `- ${f}`).join('\n');
+          result += `\n\n🚨 Detected Red Flags:\n` + data.flags.map(f => `- ${f.text}`).join('\n');
         } else {
           result += `\n\n✅ No critical red flags found.`;
         }
@@ -62,30 +44,6 @@ export default function Home() {
     }
 
     setLoading(false);
-  };
-
-  const explainFlags = async () => {
-    const cache = JSON.parse(localStorage.getItem('tokencheckr_ai_cache') || '{}');
-    if (cache[address]) {
-      setExplanation(cache[address].explanation);
-      setRiskScore(cache[address].score);
-      return;
-    }
-
-    setExplanation('Asking AI...');
-
-    const res = await fetch('/api/explain', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ flags, address })
-    });
-
-    const data = await res.json();
-    setExplanation(data.explanation || 'No explanation returned.');
-    setRiskScore(data.score);
-
-    cache[address] = { explanation: data.explanation, score: data.score };
-    localStorage.setItem('tokencheckr_ai_cache', JSON.stringify(cache));
   };
 
   const downloadCSV = (text) => {
@@ -108,6 +66,38 @@ export default function Home() {
       doc.text(explanation, 20, 30 + lines.length * 8 + 16);
     }
     doc.save('token-report.pdf');
+  };
+
+  const explainFlags = async () => {
+    const cache = JSON.parse(localStorage.getItem('tokencheckr_ai_cache') || '{}');
+    if (cache[address] && !eli5) {
+      setExplanation(cache[address].explanation);
+      setRiskScore(cache[address].score);
+      return;
+    }
+
+    setExplanation('Asking AI...');
+
+    const res = await fetch('/api/explain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ flags, address, eli5 })
+    });
+
+    const data = await res.json();
+    setExplanation(data.explanation || 'No explanation returned.');
+    setRiskScore(data.score);
+
+    if (!eli5) {
+      cache[address] = { explanation: data.explanation, score: data.score };
+      localStorage.setItem('tokencheckr_ai_cache', JSON.stringify(cache));
+    }
+  };
+
+  const getBadge = (score) => {
+    if (score >= 80) return { text: '🚨 HIGH RISK', color: 'bg-red-600' };
+    if (score >= 50) return { text: '⚠️ MEDIUM RISK', color: 'bg-yellow-600' };
+    return { text: '✅ LOW RISK', color: 'bg-green-600' };
   };
 
   return (
@@ -137,49 +127,37 @@ export default function Home() {
         <>
           <pre className="mt-6 text-sm text-green-400 whitespace-pre-wrap text-left max-w-md">{status}</pre>
 
-          {flags.length > 0 && (
-            <div className="mt-6 w-full max-w-md text-sm space-y-2">
-              <h2 className="font-semibold text-velkronRed">🚨 Detected Flags</h2>
-              {flags.map((flag, idx) => {
-                const severity = getSeverity(flag);
-                const color = {
-                  'Critical': 'bg-red-700 text-white',
-                  'Warning': 'bg-yellow-600 text-black',
-                  'Suspicious': 'bg-orange-500 text-white',
-                  'Info': 'bg-gray-600 text-white'
-                }[severity];
+          <div className="flex flex-col gap-2 mt-4 w-full max-w-md">
+            <label className="flex items-center text-sm text-gray-300 gap-2">
+              <input
+                type="checkbox"
+                checked={eli5}
+                onChange={() => setEli5(!eli5)}
+                className="accent-velkronCyan"
+              />
+              Explain Like I’m 5
+            </label>
 
-                return (
-                  <div key={idx} className="flex justify-between items-center bg-zinc-800 p-2 rounded">
-                    <span>{flag}</span>
-                    <span className={`text-xs px-2 py-1 rounded ${color}`}>
-                      {severity}
-                    </span>
-                  </div>
-                );
-              })}
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={explainFlags}
+                className="bg-velkronRed text-white px-4 py-2 rounded hover:bg-red-600"
+              >
+                Explain Flags with AI
+              </button>
+              <button
+                onClick={() => downloadCSV(status)}
+                className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600"
+              >
+                Download CSV
+              </button>
+              <button
+                onClick={exportPDF}
+                className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600"
+              >
+                Export PDF
+              </button>
             </div>
-          )}
-
-          <div className="flex gap-2 mt-4 flex-wrap">
-            <button
-              onClick={explainFlags}
-              className="bg-velkronRed text-white px-4 py-2 rounded hover:bg-red-600"
-            >
-              Explain Flags with AI
-            </button>
-            <button
-              onClick={() => downloadCSV(status)}
-              className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600"
-            >
-              Download CSV
-            </button>
-            <button
-              onClick={exportPDF}
-              className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600"
-            >
-              Export PDF
-            </button>
           </div>
         </>
       )}
@@ -190,34 +168,47 @@ export default function Home() {
           <p className="whitespace-pre-line mb-3">{explanation}</p>
 
           {riskScore !== null && (
-            <div className="flex flex-col gap-2 mt-4">
+            <div className="flex flex-col gap-2 mt-2">
               <div className="text-sm font-medium">Risk Score: {riskScore}/100</div>
-
-              <div className="relative w-full max-w-md h-4 bg-gray-800 rounded-full overflow-hidden border border-gray-600">
+              <div className="w-full bg-gray-700 h-3 rounded-full overflow-hidden">
                 <div
-                  className={`absolute left-0 top-0 h-full ${
-                    riskScore >= 80 ? 'bg-red-600'
-                    : riskScore >= 50 ? 'bg-yellow-400'
-                    : 'bg-green-500'
+                  className={`h-full transition-all duration-300 ease-in-out ${
+                    riskScore >= 80 ? 'bg-red-600' : riskScore >= 50 ? 'bg-yellow-500' : 'bg-green-500'
                   }`}
                   style={{ width: `${riskScore}%` }}
                 />
               </div>
-
-              <div className="flex justify-between text-xs text-gray-500 w-full max-w-md">
-                <span>0 (Safe)</span>
-                <span>50</span>
-                <span>100 (Danger)</span>
-              </div>
-
-              <div
-                className={`text-xs font-bold px-2 py-1 rounded mt-1 w-fit ${
-                  getBadge(riskScore).color
-                }`}
-              >
+              <div className="text-xs font-bold px-2 py-1 rounded w-fit mt-1 text-white" style={{ backgroundColor: getBadge(riskScore).color }}>
                 {getBadge(riskScore).text} — {riskScore}/100
               </div>
             </div>
+          )}
+
+          {flags.length > 0 && (
+            <>
+              <p className="text-sm font-bold text-red-400 mt-4">🚨 Detected Red Flags:</p>
+              <ul className="text-sm text-white mt-1 space-y-2">
+                {flags.map((flag, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="text-velkronCyan">•</span>
+                    <div className="flex flex-col">
+                      <span>{flag.text}</span>
+                      <span
+                        className={`text-xs mt-1 w-fit font-bold px-2 py-0.5 rounded ${
+                          flag.severity === 'HIGH'
+                            ? 'bg-red-600 text-white'
+                            : flag.severity === 'MEDIUM'
+                            ? 'bg-yellow-500 text-black'
+                            : 'bg-green-600 text-white'
+                        }`}
+                      >
+                        {flag.severity} RISK
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </div>
       )}
