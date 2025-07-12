@@ -9,6 +9,25 @@ export default function Home() {
   const [riskScore, setRiskScore] = useState(null);
   const [flags, setFlags] = useState([]);
 
+  const getSeverity = (flag) => {
+    const critical = ['proxy', 'selfdestruct', 'mint', 'hidden owner'];
+    const warning = ['trading cooldown', 'blacklist', 'transfer limit', 'call()'];
+    const suspicious = ['pause', 'reentrancy', 'max tx'];
+
+    const text = flag.toLowerCase();
+
+    if (critical.some(f => text.includes(f))) return 'Critical';
+    if (warning.some(f => text.includes(f))) return 'Warning';
+    if (suspicious.some(f => text.includes(f))) return 'Suspicious';
+    return 'Info';
+  };
+
+  const getBadge = (score) => {
+    if (score >= 80) return { text: '🚨 HIGH RISK', color: 'bg-red-600' };
+    if (score >= 50) return { text: '⚠️ MEDIUM RISK', color: 'bg-yellow-600' };
+    return { text: '✅ LOW RISK', color: 'bg-green-600' };
+  };
+
   const handleScan = async () => {
     setStatus('');
     setExplanation('');
@@ -45,28 +64,6 @@ export default function Home() {
     setLoading(false);
   };
 
-  const downloadCSV = (text) => {
-    const blob = new Blob([text.replace(/\n/g, '\r\n')], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'token-scan.csv';
-    a.click();
-  };
-
-  const exportPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(12);
-    doc.text('TokenCheckr Scan Report', 20, 20);
-    const lines = status.split('\n');
-    lines.forEach((line, i) => doc.text(line, 20, 30 + i * 8));
-    if (explanation) {
-      doc.text('AI Explanation:', 20, 30 + lines.length * 8 + 8);
-      doc.text(explanation, 20, 30 + lines.length * 8 + 16);
-    }
-    doc.save('token-report.pdf');
-  };
-
   const explainFlags = async () => {
     const cache = JSON.parse(localStorage.getItem('tokencheckr_ai_cache') || '{}');
     if (cache[address]) {
@@ -91,22 +88,26 @@ export default function Home() {
     localStorage.setItem('tokencheckr_ai_cache', JSON.stringify(cache));
   };
 
-  const getBadge = (score) => {
-    if (score >= 80) return { text: '🚨 HIGH RISK', color: 'bg-red-600' };
-    if (score >= 50) return { text: '⚠️ MEDIUM RISK', color: 'bg-yellow-600' };
-    return { text: '✅ LOW RISK', color: 'bg-green-600' };
+  const downloadCSV = (text) => {
+    const blob = new Blob([text.replace(/\n/g, '\r\n')], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'token-scan.csv';
+    a.click();
   };
 
-  const getSeverity = (flag) => {
-    const critical = ['proxy', 'selfdestruct', 'mint', 'hidden owner'];
-    const warning = ['trading cooldown', 'blacklist', 'transfer limit'];
-    const suspicious = ['pause', 'reentrancy', 'max tx'];
-
-    const text = flag.toLowerCase();
-    if (critical.some(f => text.includes(f))) return 'Critical';
-    if (warning.some(f => text.includes(f))) return 'Warning';
-    if (suspicious.some(f => text.includes(f))) return 'Suspicious';
-    return 'Info';
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(12);
+    doc.text('TokenCheckr Scan Report', 20, 20);
+    const lines = status.split('\n');
+    lines.forEach((line, i) => doc.text(line, 20, 30 + i * 8));
+    if (explanation) {
+      doc.text('AI Explanation:', 20, 30 + lines.length * 8 + 8);
+      doc.text(explanation, 20, 30 + lines.length * 8 + 16);
+    }
+    doc.save('token-report.pdf');
   };
 
   return (
@@ -135,6 +136,30 @@ export default function Home() {
       {status && (
         <>
           <pre className="mt-6 text-sm text-green-400 whitespace-pre-wrap text-left max-w-md">{status}</pre>
+
+          {flags.length > 0 && (
+            <div className="mt-6 w-full max-w-md text-sm space-y-2">
+              <h2 className="font-semibold text-velkronRed">🚨 Detected Flags</h2>
+              {flags.map((flag, idx) => {
+                const severity = getSeverity(flag);
+                const color = {
+                  'Critical': 'bg-red-700 text-white',
+                  'Warning': 'bg-yellow-600 text-black',
+                  'Suspicious': 'bg-orange-500 text-white',
+                  'Info': 'bg-gray-600 text-white'
+                }[severity];
+
+                return (
+                  <div key={idx} className="flex justify-between items-center bg-zinc-800 p-2 rounded">
+                    <span>{flag}</span>
+                    <span className={`text-xs px-2 py-1 rounded ${color}`}>
+                      {severity}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           <div className="flex gap-2 mt-4 flex-wrap">
             <button
@@ -172,10 +197,10 @@ export default function Home() {
                 <div
                   className={`absolute left-0 top-0 h-full ${
                     riskScore >= 80 ? 'bg-red-600'
-                      : riskScore >= 50 ? 'bg-yellow-400'
-                      : 'bg-green-500'
+                    : riskScore >= 50 ? 'bg-yellow-400'
+                    : 'bg-green-500'
                   }`}
-                  style={{ width: `${riskScore}%`, minWidth: '4px' }}
+                  style={{ width: `${riskScore}%` }}
                 />
               </div>
 
@@ -185,35 +210,15 @@ export default function Home() {
                 <span>100 (Danger)</span>
               </div>
 
-              <div className={`text-xs font-bold px-2 py-1 rounded mt-1 w-fit ${getBadge(riskScore).color}`}>
+              <div
+                className={`text-xs font-bold px-2 py-1 rounded mt-1 w-fit ${
+                  getBadge(riskScore).color
+                }`}
+              >
                 {getBadge(riskScore).text} — {riskScore}/100
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {flags.length > 0 && (
-        <div className="mt-6 w-full max-w-md text-sm space-y-2">
-          <h2 className="font-semibold text-velkronRed">🚨 Detected Flags</h2>
-          {flags.map((flag, idx) => {
-            const severity = getSeverity(flag);
-            const color = {
-              'Critical': 'bg-red-700 text-white',
-              'Warning': 'bg-yellow-600 text-black',
-              'Suspicious': 'bg-orange-500 text-white',
-              'Info': 'bg-gray-600 text-white'
-            }[severity];
-
-            return (
-              <div key={idx} className="flex justify-between items-center bg-zinc-800 p-2 rounded">
-                <span>{flag}</span>
-                <span className={`text-xs px-2 py-1 rounded ${color}`}>
-                  {severity}
-                </span>
-              </div>
-            );
-          })}
         </div>
       )}
     </main>
