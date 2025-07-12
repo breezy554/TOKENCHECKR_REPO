@@ -152,18 +152,31 @@ export default function Home() {
           <p className="mb-1 font-semibold text-velkronCyan">🧠 AI Explanation:</p>
           <p className="whitespace-pre-line mb-3">{explanation}</p>
           {riskScore !== null && (
-            <div className="flex flex-col gap-2">
-              <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
-                <div
-                  className={`h-full ${riskScore >= 80 ? 'bg-red-600' : riskScore >= 50 ? 'bg-yellow-500' : 'bg-green-500'}`}
-                  style={{ width: `${riskScore}%` }}
-                />
-              </div>
-              <div className={`text-xs font-bold px-2 py-1 rounded ${getBadge(riskScore).color} w-fit`}>
-                {getBadge(riskScore).text} — {riskScore}/100
-              </div>
-            </div>
-          )}
+  <div className="flex flex-col gap-2 mt-2">
+    <div className="text-sm font-medium">Risk Score: {riskScore}/100</div>
+    <div className="w-full bg-gray-700 h-3 rounded-full overflow-hidden">
+      <div
+        className={`h-full transition-all duration-300 ease-in-out ${
+          riskScore >= 80 ? 'bg-red-600' : riskScore >= 50 ? 'bg-yellow-400' : 'bg-green-500'
+        }`}
+        style={{ width: `${riskScore}%` }}
+      />
+    </div>
+    <div className="flex justify-between text-xs text-gray-400">
+      <span>0 (Safe)</span>
+      <span>50</span>
+      <span>100 (Danger)</span>
+    </div>
+    <div
+      className={`text-xs font-bold px-2 py-1 rounded mt-2 w-fit ${
+        getBadge(riskScore).color
+      }`}
+    >
+      {getBadge(riskScore).text} — {riskScore}/100
+    </div>
+  </div>
+)}
+
         </div>
       )}
     </main>
