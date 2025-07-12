@@ -26,6 +26,23 @@ export default async function handler(req, res) {
     if (/tx\.origin/.test(source)) flags.push('⚠️ Uses `tx.origin` — risky for auth');
     if (/approve/.test(source) && /require\(msg\.sender !=/.test(source)) flags.push('🪤 Hidden approval checks');
     if (/sellFee\s*>\s*99/.test(source) || /buyFee\s*>\s*99/.test(source)) flags.push('🔥 High fee behavior — likely honeypot');
+    // 🧑‍💼 Ownership & renounce detection
+if (/onlyOwner/.test(source)) {
+  flags.push('🔒 Uses `onlyOwner` — centralized control');
+}
+
+if (/renounceOwnership/.test(source)) {
+  flags.push('👋 Has `renounceOwnership()` — owner can give up control');
+}
+
+if (/transferOwnership/.test(source)) {
+  flags.push('🔄 Has `transferOwnership()` — ownership can be reassigned');
+}
+
+if (/owner\s*=\s*address\(0\)/.test(source)) {
+  flags.push('✅ Ownership set to 0x0 — contract may be renounced');
+}
+
 
     const proxyPatterns = [
       /delegatecall/i,
