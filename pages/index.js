@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import jsPDF from 'jspdf';
 
-
-
 export default function Home() {
   const [address, setAddress] = useState('');
   const [status, setStatus] = useState('');
@@ -10,8 +8,6 @@ export default function Home() {
   const [explanation, setExplanation] = useState('');
   const [riskScore, setRiskScore] = useState(null);
   const [flags, setFlags] = useState([]);
-  
-
 
   const handleScan = async () => {
     setStatus('');
@@ -101,6 +97,18 @@ export default function Home() {
     return { text: '✅ LOW RISK', color: 'bg-green-600' };
   };
 
+  const getSeverity = (flag) => {
+    const critical = ['proxy', 'selfdestruct', 'mint', 'hidden owner'];
+    const warning = ['trading cooldown', 'blacklist', 'transfer limit'];
+    const suspicious = ['pause', 'reentrancy', 'max tx'];
+
+    const text = flag.toLowerCase();
+    if (critical.some(f => text.includes(f))) return 'Critical';
+    if (warning.some(f => text.includes(f))) return 'Warning';
+    if (suspicious.some(f => text.includes(f))) return 'Suspicious';
+    return 'Info';
+  };
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4 bg-black text-white">
       <h1 className="text-4xl font-techno text-velkronCyan mb-4">TokenCheckr</h1>
@@ -155,32 +163,57 @@ export default function Home() {
         <div className="mt-6 p-4 bg-zinc-900 text-sm text-gray-100 rounded max-w-md w-full">
           <p className="mb-1 font-semibold text-velkronCyan">🧠 AI Explanation:</p>
           <p className="whitespace-pre-line mb-3">{explanation}</p>
-          {riskScore !== null && (
-  <div className="flex flex-col gap-2 mt-2">
-    <div className="text-sm font-medium">Risk Score: {riskScore}/100</div>
-    <div className="w-full bg-gray-700 h-3 rounded-full overflow-hidden">
-      <div
-        className={`h-full transition-all duration-300 ease-in-out ${
-          riskScore >= 80 ? 'bg-red-600' : riskScore >= 50 ? 'bg-yellow-400' : 'bg-green-500'
-        }`}
-        style={{ width: `${riskScore}%` }}
-      />
-    </div>
-    <div className="flex justify-between text-xs text-gray-400">
-      <span>0 (Safe)</span>
-      <span>50</span>
-      <span>100 (Danger)</span>
-    </div>
-    <div
-      className={`text-xs font-bold px-2 py-1 rounded mt-2 w-fit ${
-        getBadge(riskScore).color
-      }`}
-    >
-      {getBadge(riskScore).text} — {riskScore}/100
-    </div>
-  </div>
-)}
 
+          {riskScore !== null && (
+            <div className="flex flex-col gap-2 mt-4">
+              <div className="text-sm font-medium">Risk Score: {riskScore}/100</div>
+
+              <div className="relative w-full max-w-md h-4 bg-gray-800 rounded-full overflow-hidden border border-gray-600">
+                <div
+                  className={`absolute left-0 top-0 h-full ${
+                    riskScore >= 80 ? 'bg-red-600'
+                      : riskScore >= 50 ? 'bg-yellow-400'
+                      : 'bg-green-500'
+                  }`}
+                  style={{ width: `${riskScore}%`, minWidth: '4px' }}
+                />
+              </div>
+
+              <div className="flex justify-between text-xs text-gray-500 w-full max-w-md">
+                <span>0 (Safe)</span>
+                <span>50</span>
+                <span>100 (Danger)</span>
+              </div>
+
+              <div className={`text-xs font-bold px-2 py-1 rounded mt-1 w-fit ${getBadge(riskScore).color}`}>
+                {getBadge(riskScore).text} — {riskScore}/100
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {flags.length > 0 && (
+        <div className="mt-6 w-full max-w-md text-sm space-y-2">
+          <h2 className="font-semibold text-velkronRed">🚨 Detected Flags</h2>
+          {flags.map((flag, idx) => {
+            const severity = getSeverity(flag);
+            const color = {
+              'Critical': 'bg-red-700 text-white',
+              'Warning': 'bg-yellow-600 text-black',
+              'Suspicious': 'bg-orange-500 text-white',
+              'Info': 'bg-gray-600 text-white'
+            }[severity];
+
+            return (
+              <div key={idx} className="flex justify-between items-center bg-zinc-800 p-2 rounded">
+                <span>{flag}</span>
+                <span className={`text-xs px-2 py-1 rounded ${color}`}>
+                  {severity}
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
     </main>
