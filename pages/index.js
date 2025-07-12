@@ -9,6 +9,7 @@ export default function Home() {
   const [riskScore, setRiskScore] = useState(null);
   const [flags, setFlags] = useState([]);
   const [eli5, setEli5] = useState(false);
+  const [profile, setProfile] = useState('auditor');
 
   const handleScan = async () => {
     setStatus('');
@@ -81,7 +82,7 @@ export default function Home() {
     const res = await fetch('/api/explain', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ flags, address, eli5 })
+      body: JSON.stringify({ flags, address, eli5, profile })
     });
 
     const data = await res.json();
@@ -127,16 +128,28 @@ export default function Home() {
         <>
           <pre className="mt-6 text-sm text-green-400 whitespace-pre-wrap text-left max-w-md">{status}</pre>
 
-          <div className="flex flex-col gap-2 mt-4 w-full max-w-md">
-            <label className="flex items-center text-sm text-gray-300 gap-2">
-              <input
-                type="checkbox"
-                checked={eli5}
-                onChange={() => setEli5(!eli5)}
-                className="accent-velkronCyan"
-              />
-              Explain Like I’m 5
-            </label>
+          <div className="flex flex-col gap-3 mt-4 w-full max-w-md">
+            <div className="flex items-center justify-between text-sm text-gray-300">
+              <label className="flex gap-2 items-center">
+                <input
+                  type="checkbox"
+                  checked={eli5}
+                  onChange={() => setEli5(!eli5)}
+                  className="accent-velkronCyan"
+                />
+                Explain Like I’m 5
+              </label>
+
+              <select
+                value={profile}
+                onChange={(e) => setProfile(e.target.value)}
+                className="px-2 py-1 rounded bg-zinc-800 text-white border border-zinc-600 text-sm"
+              >
+                <option value="auditor">🧠 Auditor</option>
+                <option value="developer">👨‍💻 Developer</option>
+                <option value="beginner">🪄 Beginner</option>
+              </select>
+            </div>
 
             <div className="flex gap-2 flex-wrap">
               <button

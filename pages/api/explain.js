@@ -3,14 +3,32 @@ export default async function handler(req, res) {
     return res.status(405).end('Method Not Allowed');
   }
 
-  const { flags, address, eli5 } = req.body;
+  const { flags, address, eli5, profile } = req.body;
+
   if (!flags || !Array.isArray(flags)) {
     return res.status(400).json({ error: 'Invalid flags format' });
   }
 
-  const prompt = eli5
-    ? `Explain the following smart contract red flags in a very simple way, like I'm 5 years old. Token address: ${address}\nFlags:\n${flags.map(f => f.text).join('\n')}`
-    : `You're a smart contract auditor. Explain the following red flags clearly. Token address: ${address}\nFlags:\n${flags.map(f => f.text).join('\n')}`;
+  let stylePrompt = '';
+
+  if (eli5) {
+    stylePrompt = "Explain these smart contract flags like I'm 5 years old.";
+  } else {
+    switch (profile) {
+      case 'developer':
+        stylePrompt = "You are a Solidity developer. Explain each flag using code-focused language.";
+        break;
+      case 'beginner':
+        stylePrompt = "You are helping a beginner. Explain the flags in simple and friendly language.";
+        break;
+      case 'auditor':
+      default:
+        stylePrompt = "You are a senior smart contract auditor. Explain the following flags with technical clarity.";
+        break;
+    }
+  }
+
+  const prompt = `${stylePrompt}\nToken: ${address}\n\nFlags:\n${flags.map(f => f.text).join('\n')}`;
 
   try {
     const response = await fetch('http://localhost:11434/api/generate', {
