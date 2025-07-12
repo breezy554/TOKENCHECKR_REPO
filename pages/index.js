@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import jsPDF from 'jspdf';
 
+
+
 export default function Home() {
   const [address, setAddress] = useState('');
   const [status, setStatus] = useState('');
@@ -8,6 +10,8 @@ export default function Home() {
   const [explanation, setExplanation] = useState('');
   const [riskScore, setRiskScore] = useState(null);
   const [flags, setFlags] = useState([]);
+  
+
 
   const handleScan = async () => {
     setStatus('');
