@@ -35,6 +35,7 @@ export default function Home() {
 
         setStatus(result);
         setFlags(data.flags);
+        setRiskScore(data.score);
 
         const savedScans = JSON.parse(localStorage.getItem('tokencheckr_scans')) || [];
         savedScans.unshift({ address, score: data.score, flags: data.flags });
@@ -45,6 +46,31 @@ export default function Home() {
     }
 
     setLoading(false);
+  };
+
+  const explainFlags = async () => {
+    setExplanation('Asking AI...');
+
+    try {
+      const res = await fetch('/api/explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ flags, address, eli5, profile })
+      });
+
+      const data = await res.json();
+
+      if (!data.explanation) {
+        setExplanation('❌ No explanation returned.');
+      } else {
+        setExplanation(data.explanation);
+        if (data.score !== undefined) {
+          setRiskScore(data.score);
+        }
+      }
+    } catch (e) {
+      setExplanation('❌ AI error.');
+    }
   };
 
   const downloadCSV = (text) => {
@@ -67,32 +93,6 @@ export default function Home() {
       doc.text(explanation, 20, 30 + lines.length * 8 + 16);
     }
     doc.save('token-report.pdf');
-  };
-
-  const explainFlags = async () => {
-    const cache = JSON.parse(localStorage.getItem('tokencheckr_ai_cache') || '{}');
-    if (cache[address] && !eli5) {
-      setExplanation(cache[address].explanation);
-      setRiskScore(cache[address].score);
-      return;
-    }
-
-    setExplanation('Asking AI...');
-
-    const res = await fetch('/api/explain', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ flags, address, eli5, profile })
-    });
-
-    const data = await res.json();
-    setExplanation(data.explanation || 'No explanation returned.');
-    setRiskScore(data.score);
-
-    if (!eli5) {
-      cache[address] = { explanation: data.explanation, score: data.score };
-      localStorage.setItem('tokencheckr_ai_cache', JSON.stringify(cache));
-    }
   };
 
   const getBadge = (score) => {
@@ -191,7 +191,7 @@ export default function Home() {
                   style={{ width: `${riskScore}%` }}
                 />
               </div>
-              <div className="text-xs font-bold px-2 py-1 rounded w-fit mt-1 text-white" style={{ backgroundColor: getBadge(riskScore).color }}>
+              <div className={`text-xs font-bold px-2 py-1 rounded w-fit mt-1 text-white ${getBadge(riskScore).color}`}>
                 {getBadge(riskScore).text} — {riskScore}/100
               </div>
             </div>
