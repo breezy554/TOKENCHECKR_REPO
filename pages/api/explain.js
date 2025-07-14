@@ -1,15 +1,9 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).end('Method Not Allowed');
-  }
+  if (req.method !== 'POST') return res.status(405).end('Method Not Allowed');
 
   const { flags, address, eli5, profile } = req.body;
+  if (!flags || !Array.isArray(flags)) return res.status(400).json({ error: 'Invalid flags format' });
 
-  if (!flags || !Array.isArray(flags)) {
-    return res.status(400).json({ error: 'Invalid flags format' });
-  }
-
-  // Build style based on profile and ELI5
   let stylePrompt = '';
   if (eli5) {
     stylePrompt = "Explain the following smart contract red flags like I'm 5 years old.";
@@ -42,7 +36,6 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-
     return res.status(200).json({
       explanation: data.response || '❌ No explanation returned.',
       score: Math.max(100 - flags.length * 15, 0)
