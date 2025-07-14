@@ -9,26 +9,26 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid flags format' });
   }
 
+  // Build style based on profile and ELI5
   let stylePrompt = '';
-
   if (eli5) {
-    stylePrompt = "Explain these smart contract flags like I'm 5 years old.";
+    stylePrompt = "Explain the following smart contract red flags like I'm 5 years old.";
   } else {
     switch (profile) {
       case 'developer':
-        stylePrompt = "You are a Solidity developer. Explain each flag using code-focused language.";
+        stylePrompt = "You're a Solidity developer. Explain each red flag in code terms.";
         break;
       case 'beginner':
-        stylePrompt = "You are helping a beginner. Explain the flags in simple and friendly language.";
+        stylePrompt = "You're helping a crypto beginner. Explain these flags simply.";
         break;
       case 'auditor':
       default:
-        stylePrompt = "You are a senior smart contract auditor. Explain the following flags with technical clarity.";
+        stylePrompt = "You're a smart contract auditor. Give a clear, professional explanation.";
         break;
     }
   }
 
-  const prompt = `${stylePrompt}\nToken: ${address}\n\nFlags:\n${flags.map(f => f.text).join('\n')}`;
+  const prompt = `${stylePrompt}\nToken Address: ${address}\n\nFlags:\n${flags.map(f => f.text).join('\n')}`;
 
   try {
     const response = await fetch('http://localhost:11434/api/generate', {
@@ -42,12 +42,13 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+
     return res.status(200).json({
-      explanation: data.response,
+      explanation: data.response || '❌ No explanation returned.',
       score: Math.max(100 - flags.length * 15, 0)
     });
   } catch (err) {
     console.error('AI error:', err);
-    return res.status(500).json({ error: 'AI failed' });
+    return res.status(500).json({ error: 'AI failed to respond' });
   }
 }
