@@ -51,6 +51,14 @@ export default function Home() {
   const explainFlags = async () => {
     setExplanation('Asking AI...');
 
+    const cacheKey = `${address}_${eli5}_${profile}`;
+    const cache = JSON.parse(localStorage.getItem('tokencheckr_ai_cache') || '{}');
+    if (cache[cacheKey]) {
+      setExplanation(cache[cacheKey].explanation);
+      setRiskScore(cache[cacheKey].score);
+      return;
+    }
+
     try {
       const res = await fetch('/api/explain', {
         method: 'POST',
@@ -67,6 +75,9 @@ export default function Home() {
         if (data.score !== undefined) {
           setRiskScore(data.score);
         }
+
+        cache[cacheKey] = { explanation: data.explanation, score: data.score };
+        localStorage.setItem('tokencheckr_ai_cache', JSON.stringify(cache));
       }
     } catch (e) {
       setExplanation('❌ AI error.');
@@ -195,33 +206,6 @@ export default function Home() {
                 {getBadge(riskScore).text} — {riskScore}/100
               </div>
             </div>
-          )}
-
-          {flags.length > 0 && (
-            <>
-              <p className="text-sm font-bold text-red-400 mt-4">🚨 Detected Red Flags:</p>
-              <ul className="text-sm text-white mt-1 space-y-2">
-                {flags.map((flag, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="text-velkronCyan">•</span>
-                    <div className="flex flex-col">
-                      <span>{flag.text}</span>
-                      <span
-                        className={`text-xs mt-1 w-fit font-bold px-2 py-0.5 rounded ${
-                          flag.severity === 'HIGH'
-                            ? 'bg-red-600 text-white'
-                            : flag.severity === 'MEDIUM'
-                            ? 'bg-yellow-500 text-black'
-                            : 'bg-green-600 text-white'
-                        }`}
-                      >
-                        {flag.severity} RISK
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </>
           )}
         </div>
       )}
