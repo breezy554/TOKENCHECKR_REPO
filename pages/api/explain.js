@@ -42,7 +42,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llama3',
+        model: 'tinyllama',
         prompt,
         stream: false
       })
