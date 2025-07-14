@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     }
   }
 
-  const prompt = `${stylePrompt}\nToken Address: ${address}\n\nFlags:\n${flags.map(f => f.text).join('\n')}`;
+  const prompt = `${stylePrompt}\nToken Address: ${address}\n\nFlags:\n${flags.map(f => typeof f === 'string' ? f : f.text).join('\n')}`;
 
   try {
     const response = await fetch('http://localhost:11434/api/generate', {
