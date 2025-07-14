@@ -28,7 +28,7 @@ export default function Home() {
         let result = `✅ ${data.name || 'Token'} is ${data.isVerified ? 'verified' : 'unverified'}.\nCompiler: ${data.compiler}\n\n🔎 Risk Score: ${data.score}/100`;
 
         if (data.flags.length > 0) {
-          result += `\n\n🚨 Detected Red Flags:\n` + data.flags.map(f => `- ${f.text}`).join('\n');
+          result += `\n\n🚨 Detected Red Flags:\n` + data.flags.map((f, i) => <li key={i}>{f}</li>);
         } else {
           result += `\n\n✅ No critical red flags found.`;
         }
